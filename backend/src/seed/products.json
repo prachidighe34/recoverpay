@@ -1,0 +1,14 @@
+[
+  { "sku": "RICE-BASMATI-1KG", "name": "Basmati Rice", "price_paise": 12000, "stock": 100, "unit": "kg" },
+  { "sku": "OIL-SUNFLOWER-1L", "name": "Sunflower Oil", "price_paise": 15000, "stock": 60, "unit": "litre" },
+  { "sku": "ATTA-WHEAT-5KG", "name": "Wheat Atta", "price_paise": 25000, "stock": 40, "unit": "kg" },
+  { "sku": "SUGAR-1KG", "name": "Sugar", "price_paise": 4500, "stock": 80, "unit": "kg" },
+  { "sku": "SALT-1KG", "name": "Iodised Salt", "price_paise": 2200, "stock": 90, "unit": "kg" },
+  { "sku": "TEA-500G", "name": "Tea Leaves", "price_paise": 18000, "stock": 50, "unit": "unit" },
+  { "sku": "MILK-1L", "name": "Toned Milk", "price_paise": 6600, "stock": 30, "unit": "litre" },
+  { "sku": "DAL-TOOR-1KG", "name": "Toor Dal", "price_paise": 14000, "stock": 45, "unit": "kg" },
+  { "sku": "ONION-1KG", "name": "Onion", "price_paise": 3500, "stock": 70, "unit": "kg" },
+  { "sku": "TOMATO-1KG", "name": "Tomato", "price_paise": 4000, "stock": 65, "unit": "kg" },
+  { "sku": "POTATO-1KG", "name": "Potato", "price_paise": 3000, "stock": 75, "unit": "kg" },
+  { "sku": "SOAP-BATH-1PC", "name": "Bath Soap", "price_paise": 4000, "stock": 100, "unit": "unit" }
+]
