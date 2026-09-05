@@ -1,4 +1,3 @@
-// controllers/catalog.controller.js
 const catalogService = require("../services/catalog.service");
 
 async function listProducts(req, res, next) {

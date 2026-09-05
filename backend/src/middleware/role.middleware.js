@@ -1,5 +1,3 @@
-// middleware/role.middleware.js
-
 /**
  * Usage: router.post("/catalog", authMiddleware, requireRole("merchant"), handler)
  * Must run AFTER authMiddleware so req.user is set.

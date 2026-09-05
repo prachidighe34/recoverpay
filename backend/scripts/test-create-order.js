@@ -1,5 +1,3 @@
-// scripts/run-test-conversations.js
-//
 // Run with: node scripts/run-test-conversations.js
 //
 // Exercises the REAL backend over HTTP — real Mongo writes, real Razorpay
@@ -220,7 +218,7 @@ async function main() {
 
   // --- summary ---------------------------------------------------------
   console.log("\n" + "=".repeat(60));
-  console.log("SUMMARY — paste this into your README");
+  console.log("SUMMARY");
   console.log("=".repeat(60));
   console.log(`Total conversations run: ${SCENARIOS.length}`);
   console.log(`  Paid:                        ${results.paid}`);

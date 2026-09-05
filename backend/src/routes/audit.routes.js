@@ -1,4 +1,3 @@
-// routes/audit.routes.js
 const express = require("express");
 const { getAuditTrail } = require("../controllers/audit.controller");
 

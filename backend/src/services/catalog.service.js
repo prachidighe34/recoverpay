@@ -1,4 +1,3 @@
-// services/catalog.service.js
 const Product = require("../models/Product");
 const { NotFoundError, ValidationError } = require("../utils/errors");
 

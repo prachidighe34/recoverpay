@@ -1,23 +1,25 @@
-// middleware/error.middleware.js
-// Central error handler — mount this LAST, after all routes.
-
 function errorMiddleware(err, req, res, next) {
-  console.error("[error]", err.message);
+  console.error("[error]", err.code || err.message, "-", err.message);
+
+  // Mongo's own duplicate-key error (numeric code 11000) — safety net in
+  // case a duplicate idempotency_key ever reaches Order.create() without
+  // being caught earlier in checkout.service.js.
+  if (err.code === 11000) {
+    return res.status(409).json({
+      ok: false,
+      code: "DUPLICATE_CONFIRM",
+      error: "Duplicate request — this order was already processed",
+      field: Object.keys(err.keyPattern || {})[0]
+    });
+  }
 
   const status = err.status || 500;
   const payload = {
     ok: false,
-    error: err.message || "Internal server error",
+    code: err.code || "INTERNAL_ERROR",
+    error: err.message || "Internal server error"
   };
-
-  // Surface Mongo duplicate-key errors (e.g. idempotency_key clash) clearly
-  if (err.code === 11000) {
-    return res.status(409).json({
-      ok: false,
-      error: "Duplicate request — this order was already processed",
-      field: Object.keys(err.keyPattern || {})[0],
-    });
-  }
+  if (err.details) payload.details = err.details;
 
   res.status(status).json(payload);
 }

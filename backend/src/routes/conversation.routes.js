@@ -1,4 +1,3 @@
-// routes/conversation.routes.js
 const express = require("express");
 const authMiddleware = require("../middleware/auth.middleware");
 const { createConversation, listConversations } = require("../controllers/conversation.controller");

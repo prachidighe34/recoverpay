@@ -1,4 +1,4 @@
-// services/parser.service.js
+
 //
 // Keyword-based message parser — no LLM involved.
 // Extracts { items: [{sku, qty}], notes } from a free-text message

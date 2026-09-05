@@ -1,4 +1,3 @@
-// utils/money.js
 // All amounts are stored in paise (smallest INR unit) everywhere in the DB
 // and Razorpay API. These helpers are only for DISPLAY — never do money
 // math in rupees/floats.

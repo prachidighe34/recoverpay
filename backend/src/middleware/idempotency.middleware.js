@@ -1,5 +1,3 @@
-// middleware/idempotency.middleware.js
-
 /**
  * Ensures every checkout-confirm request carries an idempotency_key.
  * The actual duplicate-prevention guarantee is the unique index on

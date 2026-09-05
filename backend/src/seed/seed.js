@@ -1,5 +1,3 @@
-// seed/seed.js
-// Run with: node src/seed/seed.js
 // Safe to re-run — upserts by sku instead of duplicating.
 
 // Polyfill global crypto for older Node versions — see server.js for why.

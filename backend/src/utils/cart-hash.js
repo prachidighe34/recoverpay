@@ -1,4 +1,3 @@
-// utils/cart-hash.js
 const crypto = require("crypto");
 
 /**

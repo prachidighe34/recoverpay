@@ -1,4 +1,4 @@
-// tests/checkout.test.js
+
 // Run with: node --test tests/checkout.test.js
 //
 // This is an INTEGRATION test — it needs your local MongoDB running
@@ -19,7 +19,7 @@ if (!global.crypto) {
   global.crypto = require("crypto").webcrypto;
 }
 
-const TEST_DB_URI = "mongodb://localhost:27017/storechat_test";
+const TEST_DB_URI = "mongodb://localhost:27017/storechat_test_checkout";
 
 const Order = require("../src/models/Order");
 const CartDraft = require("../src/models/CartDraft");

@@ -1,4 +1,3 @@
-// config/env.js
 // Loads and validates required environment variables at boot.
 // Fails loudly here instead of failing deep inside a controller mid-demo.
 

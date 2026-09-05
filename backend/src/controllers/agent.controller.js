@@ -1,4 +1,3 @@
-// controllers/agent.controller.js
 const Product = require("../models/Product");
 const { parseMessage, isCatalogQuery, formatCatalogListing } = require("../services/parser.service");
 const { buildCartDraft } = require("../services/cart.service");

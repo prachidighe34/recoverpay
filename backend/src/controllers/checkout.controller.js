@@ -1,4 +1,3 @@
-// controllers/checkout.controller.js
 const { confirmCheckout, verifyCheckout } = require("../services/checkout.service");
 
 // POST /checkout/confirm

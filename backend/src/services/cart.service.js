@@ -1,4 +1,3 @@
-// services/cart.service.js
 const Product = require("../models/Product");
 const CartDraft = require("../models/CartDraft");
 const { computeCartHash } = require("../utils/cart-hash");

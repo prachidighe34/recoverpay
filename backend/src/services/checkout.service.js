@@ -1,17 +1,23 @@
-// services/checkout.service.js
 const CartDraft = require("../models/CartDraft");
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 const razorpayService = require("./razorpay.service");
 const { logEvent } = require("./audit.service");
+const {
+  CartNotFoundError, CartExpiredError, CartHashMismatchError,
+  PriceChangedError, OutOfStockError, PaymentVerificationError, NotFoundError
+} = require("../utils/errors");
 
 /**
  * Confirms a cart and creates a Razorpay test-mode order.
- * Gated by:
- *   1. cart_hash must match the CartDraft's current hash (proves the
- *      client is confirming the exact cart last shown, not stale/tampered)
- *   2. cart must not be expired
- *   3. idempotency_key must not already have an Order (DB unique index
- *      is the hard backstop; we also check first for a clean error message)
+ * Gated by, in order:
+ *   1. idempotency_key reuse check (retry/double-tap → return existing order)
+ *   2. cart exists and is not expired
+ *   3. cart_hash matches (proves client is confirming the exact cart shown)
+ *   4. live price/stock re-check against Product — the cart_hash alone only
+ *      proves the CLIENT didn't tamper with what it saw; it does NOT catch
+ *      a merchant changing a price or stock AFTER the cart was drafted but
+ *      BEFORE confirm. This step closes that gap.
  *
  * @param {Object} params
  * @param {string} params.conversationId
@@ -20,9 +26,6 @@ const { logEvent } = require("./audit.service");
  * @param {string} params.idempotency_key
  */
 async function confirmCheckout({ conversationId, cartDraftId, cart_hash, idempotency_key }) {
-  // Check for an existing order under this key FIRST — if found, this is a
-  // retry/double-tap, not a new checkout. Return the existing order instead
-  // of erroring, so the client's UI can just show the same result.
   const existingOrder = await Order.findOne({ idempotency_key });
   if (existingOrder) {
     await logEvent(conversationId, "duplicate_confirm_blocked", {
@@ -34,22 +37,50 @@ async function confirmCheckout({ conversationId, cartDraftId, cart_hash, idempot
 
   const cartDraft = await CartDraft.findById(cartDraftId);
   if (!cartDraft) {
-    const err = new Error("Cart not found or expired");
-    err.status = 410;
-    throw err;
+    throw new CartNotFoundError({ cartDraftId });
   }
 
   if (cartDraft.expires_at < new Date()) {
     await logEvent(conversationId, "cart_expired", { cartDraftId });
-    const err = new Error("Cart expired — please confirm again");
-    err.status = 410;
-    throw err;
+    throw new CartExpiredError({ cartDraftId, expires_at: cartDraft.expires_at });
   }
 
   if (cartDraft.cart_hash !== cart_hash) {
-    const err = new Error("cart_hash mismatch — cart may have changed, please review again");
-    err.status = 409;
-    throw err;
+    await logEvent(conversationId, "cart_validation_failed", {
+      reason: "hash_mismatch", provided_hash: cart_hash, expected_hash: cartDraft.cart_hash
+    });
+    throw new CartHashMismatchError({ provided_hash: cart_hash, expected_hash: cartDraft.cart_hash });
+  }
+
+  // --- live price/stock re-check (closes the merchant-changed-price gap) ---
+  const skus = cartDraft.items.map((i) => i.sku);
+  const liveProducts = await Product.find({ sku: { $in: skus } });
+  const liveBySkU = new Map(liveProducts.map((p) => [p.sku, p]));
+
+  const priceMismatches = [];
+  const outOfStock = [];
+
+  for (const item of cartDraft.items) {
+    const live = liveBySkU.get(item.sku);
+    if (!live) {
+      priceMismatches.push({ sku: item.sku, reason: "product_removed" });
+      continue;
+    }
+    if (live.price_paise !== item.price_paise) {
+      priceMismatches.push({ sku: item.sku, cart_price_paise: item.price_paise, current_price_paise: live.price_paise });
+    }
+    if (live.stock < item.qty) {
+      outOfStock.push({ sku: item.sku, requested: item.qty, available: live.stock });
+    }
+  }
+
+  if (priceMismatches.length > 0) {
+    await logEvent(conversationId, "cart_validation_failed", { reason: "price_changed", priceMismatches });
+    throw new PriceChangedError({ priceMismatches });
+  }
+  if (outOfStock.length > 0) {
+    await logEvent(conversationId, "cart_validation_failed", { reason: "out_of_stock", outOfStock });
+    throw new OutOfStockError({ outOfStock });
   }
 
   await logEvent(conversationId, "checkout_confirmed", {
@@ -76,7 +107,9 @@ async function confirmCheckout({ conversationId, cartDraftId, cart_hash, idempot
 
   await logEvent(conversationId, "razorpay_order_created", {
     orderId: order._id,
-    razorpay_order_id: razorpayOrder.id
+    razorpay_order_id: razorpayOrder.id,
+    amount_paise: order.amount_paise,
+    idempotency_key
   });
 
   return { order, isNew: true, razorpayOrder };
@@ -91,9 +124,7 @@ async function confirmCheckout({ conversationId, cartDraftId, cart_hash, idempot
 async function verifyCheckout({ conversationId, razorpay_order_id, razorpay_payment_id, razorpay_signature }) {
   const order = await Order.findOne({ razorpay_order_id });
   if (!order) {
-    const err = new Error("Order not found");
-    err.status = 404;
-    throw err;
+    throw new NotFoundError("Order not found", "ORDER_NOT_FOUND", { razorpay_order_id });
   }
 
   const valid = razorpayService.verifySignature({
@@ -110,9 +141,7 @@ async function verifyCheckout({ conversationId, razorpay_order_id, razorpay_paym
       orderId: order._id,
       reason: "signature_mismatch"
     });
-    const err = new Error("Payment verification failed — not charged");
-    err.status = 400;
-    throw err;
+    throw new PaymentVerificationError({ orderId: order._id });
   }
 
   order.status = "paid";

@@ -1,4 +1,3 @@
-// models/AuditLog.js
 const mongoose = require("mongoose");
 
 const AUDIT_EVENTS = [
@@ -12,7 +11,8 @@ const AUDIT_EVENTS = [
   "payment_verified",
   "payment_failed",
   "duplicate_confirm_blocked",
-  "cart_expired"
+  "cart_expired",
+  "cart_validation_failed"
 ];
 
 const auditLogSchema = new mongoose.Schema(

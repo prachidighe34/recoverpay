@@ -1,4 +1,3 @@
-// controllers/conversation.controller.js
 const Conversation = require("../models/Conversation");
 
 // POST /conversations — creates a new chat session for the logged-in customer

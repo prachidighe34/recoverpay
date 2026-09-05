@@ -1,4 +1,4 @@
-// sockets/assistant.socket.js
+
 const Message = require("../models/Message");
 const Product = require("../models/Product");
 const { parseMessage, isCatalogQuery, formatCatalogListing } = require("../services/parser.service");
