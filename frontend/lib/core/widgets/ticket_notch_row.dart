@@ -1,4 +1,3 @@
-// core/widgets/ticket_notch_row.dart
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import 'dashed_divider.dart';

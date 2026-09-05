@@ -1,4 +1,3 @@
-// features/chat/data/chat_api.dart
 import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import 'chat_model.dart';

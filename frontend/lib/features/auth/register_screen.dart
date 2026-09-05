@@ -1,4 +1,3 @@
-// features/auth/register_screen.dart
 import 'package:flutter/material.dart';
 import '../../core/config/routes.dart';
 import '../../core/config/theme.dart';

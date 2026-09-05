@@ -1,4 +1,3 @@
-// features/chat/presentation/cart_card.dart
 import 'package:flutter/material.dart';
 import '../../../core/config/theme.dart';
 import '../../../core/widgets/ticket_notch_row.dart';
@@ -30,7 +29,7 @@ class CartCard extends StatelessWidget {
   String get _buttonLabel {
     switch (paymentState) {
       case PaymentUiState.confirming:
-        return "Confirming...";
+        return "Creating secure payment order...";
       case PaymentUiState.awaitingPayment:
         return "Waiting for payment...";
       case PaymentUiState.verifying:

@@ -1,4 +1,3 @@
-// core/widgets/dashed_divider.dart
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 

@@ -1,4 +1,3 @@
-// features/chat/presentation/message_bubble.dart
 import 'package:flutter/material.dart';
 import '../../../core/config/theme.dart';
 import '../data/chat_model.dart';

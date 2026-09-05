@@ -1,4 +1,3 @@
-// features/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import '../../core/config/routes.dart';
 import '../../core/config/theme.dart';
@@ -56,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
                 // --- wordmark ---
                 Text(
-                  "StoreChat",
+                  "RecoverPay",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displayLarge,
                 ),

@@ -1,4 +1,3 @@
-// features/chat/presentation/chat_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/config/routes.dart';
@@ -88,8 +87,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 CartCard(
                                   cart: cart,
                                   outOfStock: msg.outOfStock,
-                                  paymentState: controller.paymentState,
-                                  onConfirm: controller.confirmCart,
+                                  paymentState:
+                                      controller.stateFor(cart.cartDraftId),
+                                  onConfirm: () => controller.confirmCart(cart),
                                 ),
                               ],
                             );

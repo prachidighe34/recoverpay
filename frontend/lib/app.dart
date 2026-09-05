@@ -1,4 +1,3 @@
-// app.dart
 import 'package:flutter/material.dart';
 import 'core/config/routes.dart';
 import 'core/config/theme.dart';
@@ -13,7 +12,8 @@ class StoreChatApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'StoreChat',
+      debugShowCheckedModeBanner: false,
+      title: 'RecoverPay',
       theme: AppTheme.theme,
       initialRoute: Routes.login,
       onGenerateRoute: (settings) {

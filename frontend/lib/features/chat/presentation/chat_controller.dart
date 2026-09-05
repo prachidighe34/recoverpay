@@ -22,15 +22,20 @@ class ChatController extends ChangeNotifier {
   final Razorpay _razorpay = Razorpay();
 
   final List<ChatMessage> messages = [];
-  CartDraft? pendingCart;
-  PaymentUiState paymentState = PaymentUiState.idle;
   String? lastError;
   bool sending = false;
 
-  // Generated once per confirm attempt — a NEW key each time the user
-  // taps Confirm on a NEW cart, but reused if they retry the SAME cart
-  // after a failure, so a retry doesn't double-charge either.
-  String? _currentIdempotencyKey;
+  // Payment state is scoped PER CART (keyed by cartDraftId), not shared
+  // across the whole conversation — otherwise, once one order is paid,
+  // every other cart card (past or future) would incorrectly show as
+  // "Paid" too, since they'd all be reading the same global flag.
+  final Map<String, PaymentUiState> _cartPaymentStates = {};
+  final Map<String, String> _idempotencyKeys = {};
+
+  // Tracks which cart the currently-open Razorpay checkout belongs to,
+  // since Razorpay's success/error callbacks don't carry that context
+  // themselves — only one checkout can be open at a time, so this is safe.
+  String? _activeCartDraftId;
 
   ChatController({required this.conversationId}) {
     _socket.connect();
@@ -44,11 +49,11 @@ class ChatController extends ChangeNotifier {
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
   }
 
+  PaymentUiState stateFor(String cartDraftId) =>
+      _cartPaymentStates[cartDraftId] ?? PaymentUiState.idle;
+
   void _handleAssistantMessage(ChatMessage msg) {
     messages.add(msg);
-    if (msg.cart != null) {
-      pendingCart = msg.cart;
-    }
     sending = false;
     notifyListeners();
   }
@@ -75,10 +80,15 @@ class ChatController extends ChangeNotifier {
     return "$conversationId-${DateTime.now().millisecondsSinceEpoch}-$rand";
   }
 
-  /// User tapped "Confirm ₹X" on the cart card.
-  Future<void> confirmCart() async {
-    final cart = pendingCart;
-    if (cart == null) return;
+  String _idempotencyKeyFor(String cartDraftId) {
+    return _idempotencyKeys.putIfAbsent(cartDraftId, _newIdempotencyKey);
+  }
+
+  /// User tapped "Confirm ₹X" on a specific cart card. Each card passes
+  /// its OWN cart in, so confirming an older card in the scroll history
+  /// (rather than only ever the latest one) works correctly too.
+  Future<void> confirmCart(CartDraft cart) async {
+    final cartDraftId = cart.cartDraftId;
 
     if (cart.isExpired) {
       lastError = "This cart has expired — please ask again.";
@@ -86,20 +96,21 @@ class ChatController extends ChangeNotifier {
       return;
     }
 
-    paymentState = PaymentUiState.confirming;
+    _activeCartDraftId = cartDraftId;
+    _cartPaymentStates[cartDraftId] = PaymentUiState.confirming;
     lastError = null;
     notifyListeners();
 
-    // Only mint a new key if we don't already have one in flight for
-    // this exact cart (covers the double-tap-Pay case).
-    _currentIdempotencyKey ??= _newIdempotencyKey();
+    // Reused across retries of the SAME cart (covers the double-tap-Pay
+    // case) — but each distinct cartDraftId gets its own key.
+    final idempotencyKey = _idempotencyKeyFor(cartDraftId);
 
     try {
       final result = await _api.confirmCheckout(
         conversationId: conversationId,
-        cartDraftId: cart.cartDraftId,
+        cartDraftId: cartDraftId,
         cartHash: cart.cartHash,
-        idempotencyKey: _currentIdempotencyKey!,
+        idempotencyKey: idempotencyKey,
       );
 
       final razorpay = result["razorpay"];
@@ -107,7 +118,7 @@ class ChatController extends ChangeNotifier {
         throw ChatApiException("No payment order returned");
       }
 
-      paymentState = PaymentUiState.awaitingPayment;
+      _cartPaymentStates[cartDraftId] = PaymentUiState.awaitingPayment;
       notifyListeners();
 
       final options = {
@@ -115,26 +126,30 @@ class ChatController extends ChangeNotifier {
         'amount': razorpay["amount"],
         'currency': razorpay["currency"] ?? "INR",
         'order_id': razorpay["order_id"],
-        'name': 'StoreChat',
+        'name': 'RecoverPay',
         'description': 'Order confirmation',
       };
 
       _razorpay.open(options);
     } on ChatApiException catch (e) {
-      paymentState = PaymentUiState.failed;
+      _cartPaymentStates[cartDraftId] = PaymentUiState.failed;
       lastError = e.message;
-      // On a 409/410 (hash mismatch / expired), the cart itself is stale —
-      // clear the idempotency key so a fresh cart gets a fresh one.
+      // On a 409/410 (hash mismatch / expired), this specific cart is
+      // stale — clear its idempotency key. The cart itself can't be
+      // retried (it's fixed data from a past message), so the customer
+      // needs to ask again for a fresh one.
       if (e.statusCode == 409 || e.statusCode == 410) {
-        _currentIdempotencyKey = null;
-        pendingCart = null;
+        _idempotencyKeys.remove(cartDraftId);
       }
       notifyListeners();
     }
   }
 
   Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
-    paymentState = PaymentUiState.verifying;
+    final cartDraftId = _activeCartDraftId;
+    if (cartDraftId == null) return;
+
+    _cartPaymentStates[cartDraftId] = PaymentUiState.verifying;
     notifyListeners();
 
     try {
@@ -145,15 +160,13 @@ class ChatController extends ChangeNotifier {
         razorpaySignature: response.signature!,
       );
 
-      paymentState = PaymentUiState.paid;
-      pendingCart = null;
-      _currentIdempotencyKey = null;
+      _cartPaymentStates[cartDraftId] = PaymentUiState.paid;
       messages.add(ChatMessage(
         sender: MessageSender.assistant,
         text: "Payment confirmed ✅ Your order is on its way!",
       ));
     } on ChatApiException catch (e) {
-      paymentState = PaymentUiState.failed;
+      _cartPaymentStates[cartDraftId] = PaymentUiState.failed;
       lastError =
           "${e.message} — not charged if this failed before confirmation.";
     }
@@ -161,10 +174,13 @@ class ChatController extends ChangeNotifier {
   }
 
   void _onPaymentError(PaymentFailureResponse response) {
+    final cartDraftId = _activeCartDraftId;
+    if (cartDraftId == null) return;
+
     // Razorpay itself reports failure/cancellation — order stays "created"
-    // (unpaid) in our DB. User can retry with the SAME idempotency key,
-    // since it's still the same cart attempt.
-    paymentState = PaymentUiState.failed;
+    // (unpaid) in our DB. User can retry THIS cart with the same
+    // idempotency key, since it's still the same attempt.
+    _cartPaymentStates[cartDraftId] = PaymentUiState.failed;
     lastError =
         "Payment not completed — you were not charged. You can try again.";
     notifyListeners();
