@@ -1,19 +1,16 @@
-
-
-# Recoverpay (Track 01)
+# StoreChat
 
 **Conversational chat-to-checkout with gated, auditable payments.**
 
 Customer texts a store assistant in plain language ("2kg rice and 1 oil, tomorrow"). The assistant maps that to the live catalog, shows a confirm card with items and total, and only creates a Razorpay order after the customer taps Confirm. Every money-relevant step — message in, intent parsed, cart drafted, checkout confirmed, order created, payment verified — is written to an audit log you can pull up per conversation.
 
-Built for Razorpay's internship Track 01 brief: conversational in-app checkout, every money action explainable/bounded/gated, full audit trail, real failure handling.
+A portfolio project exploring one question: how do you put a conversational interface in front of payments without giving the AI any control over the money? The design goals were conversational in-app checkout, every money action explainable, bounded and gated, a full audit trail, and real failure handling. Payments run in Razorpay test mode, so no real money moves.
 
 ---
 
-## Demo
+## Video
 
-- 5-minute video: `https://youtu.be/smF1ZmsTzM0`
-- Public repo: `https://github.com/prachidighe34/recoverpay`
+- Video: /home/prachi/recoverpay/recoverpay.mp4
 
 ---
 
@@ -33,7 +30,7 @@ Flutter (chat UI)
 
 ### Design decision: keyword parser instead of an LLM
 
-The brief allows either, and explicitly notes _"if LLM setup eats time, ship rules-based parser + one LLM explanation sentence — working payments beat a fancy model."_ Time went into the parts that are hard to get right and easy to get wrong: cart-hash gating, idempotency, price/stock re-validation, and audit logging. The parser only ever emits structured JSON against the live catalog — it never talks to the payment layer directly, so the money-safety guarantees below hold regardless of which parser produces the cart.
+An LLM parser was a reasonable option, but working, safe payments matter more than a fancy model, so a rules-based parser shipped first. Time went into the parts that are hard to get right and easy to get wrong: cart-hash gating, idempotency, price/stock re-validation, and audit logging. The parser only ever emits structured JSON against the live catalog — it never talks to the payment layer directly, so the money-safety guarantees below hold regardless of which parser produces the cart.
 
 ---
 
@@ -193,21 +190,19 @@ node --test tests/                       # all automated tests
 ## Project structure
 
 ```
-recoverpay/
+storechat/
 ├── backend/
 │   ├── src/
-│   │   ├── config/        # env, db, razorpay
-|   |   ├── controllers/   # agent, audit, auth, catalog, checkout, conversation
+│   │   ├── config/        # env validation, db, razorpay client
 │   │   ├── models/        # User, Product, Conversation, Message, CartDraft, Order, AuditLog
-│   │   ├── routes/        # agent, audit, auth, catalog, checkout, conversation
+│   │   ├── routes/ controllers/ services/
 │   │   ├── middleware/    # auth, role, idempotency, error handling
-│   │   ├── sockets/       # assistant
-│   │   ├── utils/         # cart-hash, error, money
+│   │   ├── sockets/       # real-time chat handler
+│   │   ├── utils/         # cart-hash, structured error classes
 │   │   └── seed/          # catalog seed data
-|   |   ├──services/       # audit, cart, catalog, checkout, parser, razorpay
 │   ├── scripts/           # test-order smoke test, 20-conversation test run
 │   └── tests/             # node:test unit + integration tests
-└── frontend/
+└── mobile/
     └── lib/
         ├── core/           # theme, routing, API/socket clients, shared widgets
         └── features/
@@ -230,7 +225,7 @@ node src/seed/seed.js
 npm run dev
 ```
 
-**Frontend**
+**Mobile**
 
 ```bash
 cd mobile
@@ -248,12 +243,25 @@ docker compose up -d
 
 ---
 
+## Walkthrough
+
+1. **Seed the catalog and check the API.** `node src/seed/seed.js`, then `curl http://localhost:5000/catalog` — show 12 real products.
+2. **Open the Flutter app, send a real order.** "2kg rice and 1 oil" — show the structured cart card with items and total, built entirely server-side.
+3. **Tap Confirm.** no Razorpay order exists yet. It is created at this moment, gated by `cart_hash` and a fresh `idempotency_key`. You can see it in the Razorpay test dashboard or the response payload.
+4. **Complete payment**, show the "Paid" state in the app.
+5. **Open the audit screen.** Trace message → intent → cart → order ID → payment ID → status through the timeline entries.
+6. **Try a failure case** — double-tap Confirm (or reuse an expired cart) and show the app's "not charged" message.
+7. **Reopen the audit trail** for that same conversation — show the `duplicate_confirm_blocked` (or `cart_expired`) event, and that only one `razorpay_order_created` event exists despite the double-tap.
+8. **Run the test suite** (`node --test tests/`) and the 20-conversation script to see the summary: 14 paid, 0 double charges, 15/15 automated tests passing.
+
+---
+
 ## Known limitations
 
 - Intent parsing is keyword-based, not LLM-based (see _Design decision_ above) — handles clear item+quantity phrasing well, less robust on very messy or heavily colloquial input.
 - Razorpay webhook verification isn't wired up — see _Payment verification_ above for why and what a production version would add.
 - No merchant-facing UI for catalog management yet — merchant catalog CRUD exists as backend API only (`POST/PATCH/DELETE /catalog`, role-gated).
-- Product browsing is chat-only by design (matches the brief's differentiator); customers can ask "what do you have?" for a full listing.
+- Product browsing is chat-only by design (a deliberate choice: the point is checkout through conversation); customers can ask "what do you have?" for a full listing.
 - Test metrics above are from synthetic scripted conversations against a seeded catalog, not real customer traffic.
 
 ---
@@ -263,3 +271,9 @@ docker compose up -d
 - LLM-based intent parser, with automatic fallback to the keyword matcher on invalid/empty output — the `{items, notes}` contract means this is a drop-in swap, not a rewrite.
 - Merchant dashboard for catalog and order management (the backend API already exists; no UI yet).
 - Webhook-based payment confirmation as the authoritative source of truth, plus refund handling.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).
