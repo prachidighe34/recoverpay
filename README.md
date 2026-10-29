@@ -10,7 +10,9 @@ A portfolio project exploring one question: how do you put a conversational inte
 
 ## Video
 
-- Video: https://youtube.com/shorts/s3DjezTu_Ws?feature=share
+- [![RecoverPay]](https://raw.githubusercontent.com/prachidighe34/recoverpay/main/recoverpay.mp4)
+
+
 
 ---
 
