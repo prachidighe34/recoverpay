@@ -10,7 +10,8 @@ A portfolio project exploring one question: how do you put a conversational inte
 
 ## Video
 
-- [![RecoverPay]](https://raw.githubusercontent.com/prachidighe34/recoverpay/main/recoverpay.mp4)
+- [![Watch the video](https://raw.githubusercontent.com/prachidighe34/recoverpay/main/recover.png)](https://raw.githubusercontent.com/prachidighe34/recoverpay/main/recoverpay.mp4)
+
 
 
 
