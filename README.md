@@ -9,9 +9,8 @@ A portfolio project exploring one question: how do you put a conversational inte
 ---
 
 ## Video
-<p align = "center">
+
  ![RecoverPay](./recoverpay.gif)
-</p>
 
 
 ---
