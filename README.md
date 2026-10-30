@@ -1,4 +1,4 @@
-# StoreChat
+# RecoverPay
 
 **Conversational chat-to-checkout with gated, auditable payments.**
 
