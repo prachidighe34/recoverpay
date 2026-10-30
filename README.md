@@ -10,7 +10,7 @@ A portfolio project exploring one question: how do you put a conversational inte
 
 ## Video
 
-- ![RecoverPay](./recoverpay.gif)
+ ![RecoverPay](./recoverpay.gif)
 
 
 
